@@ -71,7 +71,9 @@ export default function TrendChart({ rows = [], metric, label, unit, monthly = f
     <div className="trend-controls">
       <div className="period-presets" role="group" aria-label="Chart time range">
         {PRESETS.map(preset => <button key={preset.id} type="button" aria-pressed={period === preset.id}
-          className={period === preset.id ? 'chosen' : ''} onClick={() => setPeriod(preset.id)} title={preset.label}>{preset.short}</button>)}
+          className={period === preset.id ? 'chosen' : ''} onClick={() => setPeriod(preset.id)}
+          disabled={monthly && preset.id === '7d'}
+          title={monthly && preset.id === '7d' ? 'Unavailable for monthly data' : preset.label}>{preset.short}</button>)}
       </div>
       <button type="button" className={`advanced-toggle ${advancedOpen ? 'open' : ''}`} onClick={() => setAdvancedOpen(value => !value)}
         aria-expanded={advancedOpen}><CalendarDays size={14} /> Advanced view <ChevronDown size={14} /></button>
@@ -106,11 +108,12 @@ export default function TrendChart({ rows = [], metric, label, unit, monthly = f
       layout={{
         autosize: true, height: 260, margin: { l: 42, r: 12, t: 10, b: 38 }, paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
         font: { color: '#8da0b8', family: 'DM Sans, sans-serif', size: 11 },
-        xaxis: { gridcolor: 'rgba(148,163,184,.09)', zeroline: false, tickfont: { color: '#71839a' } },
-        yaxis: { gridcolor: 'rgba(148,163,184,.09)', zeroline: false, title: { text: displayUnit, font: { size: 10 } } },
+        xaxis: { gridcolor: 'rgba(148,163,184,.09)', zeroline: false, tickfont: { color: '#71839a' }, fixedrange: true },
+        yaxis: { gridcolor: 'rgba(148,163,184,.09)', zeroline: false, title: { text: displayUnit, font: { size: 10 } }, fixedrange: true },
+        dragmode: false,
         legend: { orientation: 'h', y: 1.16, x: 0, font: { size: 10 } }, hovermode: 'x unified'
       }}
-      config={{ displayModeBar: 'hover', displaylogo: false, responsive: true, scrollZoom: true }}
+      config={{ displayModeBar: false, displaylogo: false, responsive: true, scrollZoom: false }}
       style={{ width: '100%', minHeight: 260 }}
       useResizeHandler
     /> : <div className="empty-chart">No observations are available for {rangeLabel}.</div>}

@@ -3,7 +3,7 @@
 NASA Space Apps Challenge · *Be An Earth System Trend Detective!*
 © TerraSignal
 
-React + Leaflet + Plotly dashboard, FastAPI backend, scikit-learn analytics (Z-score, percentiles, DBSCAN, Isolation Forest) and SQLite. No Docker.
+React + Leaflet + Plotly dashboard, FastAPI backend, scikit-learn analytics (temperature Z-scores, vegetation deltas, precipitation quantiles, fire-detection DBSCAN, Isolation Forest) and SQLite. No Docker.
 
 ## Login
 | Username | Password (default) |
