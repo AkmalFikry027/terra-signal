@@ -278,8 +278,8 @@ def _build(location: str) -> dict[str, Any]:
     severity = "HIGH" if flags >= 3 else "MODERATE" if is_anomaly else "LOW"
 
     parts = []
-    temperature_label = bundle["temperature"].get("label", "temperature")
-    vegetation_label = bundle["vegetation"].get("label", "vegetation index")
+    temperature_label = "Temperature"
+    vegetation_label = "Vegetation"
     if abs(t_z) >= 1:
         parts.append(f"{temperature_label} is {abs(t_z):.1f} standard deviations {'above' if t_z > 0 else 'below'} baseline")
     vegetation_watch = config.SOIL_WATCH_PCT if soil_wetness else config.NDVI_WATCH_PCT
@@ -316,9 +316,9 @@ def _build(location: str) -> dict[str, Any]:
 
     sources = []
     for kind, label in (("temperature", "Temperature"), ("vegetation", "Vegetation"),
-                        ("precipitation", "Precipitation"), ("fires", "Fire")):
+                        ("precipitation", "Precipitation"), ("fires", "Fire detection")):
         ds = bundle[kind]
-        sources.append({"indicator": ds.get("label", label), "dataset": ds.get("dataset", kind), "source_mode": ds.get("source_mode", "UNKNOWN"),
+        sources.append({"indicator": label, "dataset": ds.get("dataset", kind), "source_mode": ds.get("source_mode", "UNKNOWN"),
                         "baseline_period": ds.get("baseline_period", ""), "retrieved_at": ds.get("retrieved_at"),
                         "fallback_reason": ds.get("fallback_reason"),
                         "records": len(ds.get("observations") or ds.get("detections") or [])})
@@ -348,15 +348,15 @@ def _build(location: str) -> dict[str, Any]:
                             "isolation_forest_anomaly_points": len(outliers), "cells_analysed": len(cells)},
         "temperature": {"current": round(t_cur, 2), "baseline": round(t_base, 2), "z_score": round(t_z, 2),
                         "status": st["t"], "unit": bundle["temperature"].get("unit", "°C"),
-                        "label": bundle["temperature"].get("label", "Land surface temperature"),
+                        "label": "Temperature",
                         "timeseries": temperature_timeseries},
         "vegetation": {"ndvi": round(n_cur, 3), "baseline": round(n_base, 3), "change_percent": round(n_chg, 1),
                        "status": st["v"], "unit": bundle["vegetation"].get("unit", "NDVI"),
-                       "label": bundle["vegetation"].get("label", "Vegetation health · NDVI"),
+                       "label": "Vegetation",
                        "timeseries": vegetation_timeseries},
         "precipitation": {"current_mm": round(r_cur, 1), "baseline_mm": round(r_base, 1), "percentile": round(r_pct, 1),
                           "status": st["r"], "unit": bundle["precipitation"].get("unit", "mm/day"),
-                          "label": bundle["precipitation"].get("label", "Precipitation"),
+                          "label": "Precipitation",
                           "timeseries": precipitation_timeseries},
         "fire": {"detections": len(fires), "previous_period_detections": prev, "clusters": len(labels),
                  "change_percent": round(f_chg, 1) if fire_available else None,
@@ -372,7 +372,7 @@ def _build(location: str) -> dict[str, Any]:
                            if soil_wetness else
                            f"{bundle['vegetation'].get('label', 'NDVI')} value and change against the same-month baseline; "
                            f"≤ {config.NDVI_DECLINE_PCT:g}% decline, ≤ {config.NDVI_WATCH_PCT:g}% watch."),
-            "precipitation": f"Percentile rank vs historical distribution; < {config.RAIN_DEFICIT_PCTL:g}th = deficit, ≥ {config.RAIN_EXTREME_PCTL:g}th = extreme.",
+            "precipitation": f"Historical distribution quantile rank (percentile position); < {config.RAIN_DEFICIT_PCTL:g}th = deficit, ≥ {config.RAIN_EXTREME_PCTL:g}th = extreme.",
             "fire": (f"DBSCAN (haversine) eps = {config.DBSCAN_EPS_KM:g} km, min_samples = {config.DBSCAN_MIN_SAMPLES}; no preset cluster count."
                      if fire_available else "Historical fire observations are unavailable in this archive."),
             "compound": (f"Isolation Forest over standardised {temperature_label}, {vegetation_label}, and precipitation indicators per grid cell; "

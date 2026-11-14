@@ -12,11 +12,18 @@ from services import cache, dashboard
 
 router = APIRouter(prefix="/api", tags=["data"], dependencies=[Depends(current_user)])
 ADMIN1_BOUNDARIES = Path(__file__).resolve().parents[2] / "data" / "history" / "natural_earth_10m_admin_1.geojson.gz"
+COUNTRY_BOUNDARIES = Path(__file__).resolve().parents[2] / "data" / "history" / "natural_earth_110m_countries.geojson"
 
 
 @lru_cache(maxsize=1)
 def _admin1_features():
     with gzip.open(ADMIN1_BOUNDARIES, "rt", encoding="utf-8") as stream:
+        return json.load(stream)["features"]
+
+
+@lru_cache(maxsize=1)
+def _country_features():
+    with COUNTRY_BOUNDARIES.open(encoding="utf-8") as stream:
         return json.load(stream)["features"]
 
 
@@ -57,6 +64,24 @@ def map_areas(country: str):
     if not areas:
         raise HTTPException(404, f"No administrative boundaries are available for {country}.")
     return {"type": "FeatureCollection", "features": areas}
+
+
+@router.get("/map/countries")
+def map_countries():
+    try:
+        features = _country_features()
+    except (OSError, json.JSONDecodeError) as e:
+        raise HTTPException(503, "Country boundary data is unavailable.") from e
+
+    countries = []
+    for feature in features:
+        properties = feature.get("properties") or {}
+        name = properties.get("ADMIN") or properties.get("name")
+        if name and feature.get("geometry"):
+            countries.append({"type": "Feature", "properties": {"name": name}, "geometry": feature["geometry"]})
+    if not countries:
+        raise HTTPException(404, "No country boundaries are available.")
+    return {"type": "FeatureCollection", "features": countries}
 
 
 @router.get("/dashboard/{location}")

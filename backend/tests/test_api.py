@@ -56,6 +56,13 @@ def test_api_description_omits_personal_author_credit(client):
 def test_dashboard_shape(client):
     d = client.get("/api/dashboard/Sri_Lanka", headers=auth(client)).json()
     assert d["source_mode"] == "MOCK" and len(d["cells"]) == 100 and d["fire"]["clusters"] > 0
+    assert [d[k]["label"] for k in ("temperature", "vegetation", "precipitation")] == [
+        "Temperature", "Vegetation", "Precipitation"
+    ]
+    assert [s["indicator"] for s in d["sources"]] == [
+        "Temperature", "Vegetation", "Precipitation", "Fire detection"
+    ]
+    assert "quantile" in d["methodology"]["precipitation"].lower()
     for k in ("temperature", "vegetation", "precipitation", "fire", "overall_anomaly", "explanation", "hotspots"):
         assert k in d
     for p in ("temperature", "vegetation", "precipitation", "fire"):
@@ -94,6 +101,13 @@ def test_map_area_boundaries(client, tmp_path, monkeypatch):
         assert client.get("/api/map/areas/Missing", headers=auth(client)).status_code == 404
     finally:
         data_router._admin1_features.cache_clear()
+
+
+def test_map_country_boundaries(client):
+    response = client.get("/api/map/countries", headers=auth(client))
+    assert response.status_code == 200
+    names = {feature["properties"]["name"] for feature in response.json()["features"]}
+    assert "Bangladesh" in names
 
 
 def test_change_password_flow(client):

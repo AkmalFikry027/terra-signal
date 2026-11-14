@@ -9,6 +9,7 @@ import Login from './components/Login'
 import Settings from './components/Settings'
 import EarthMap from './components/EarthMap'
 import TrendChart from './components/TrendChart'
+import IndicatorAnalysis from './components/IndicatorAnalysis'
 
 const fmt = (v, d = 1) => Number(v ?? 0).toFixed(d)
 const initials = n => (n || '?').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
@@ -296,7 +297,7 @@ export default function App() {
               <StatCard icon={Thermometer} label={data.temperature.label} value={fmt(data.temperature.current)} unit={data.temperature.unit} delta={`${data.temperature.z_score >= 0 ? '+' : ''}${fmt(data.temperature.z_score, 2)}σ vs baseline`} status={data.temperature.status} hint={`(Z-score deviation; baseline: ${fmt(data.temperature.baseline)} ${data.temperature.unit})`} accent="orange" />
               <StatCard icon={Leaf} label={data.vegetation.label} value={fmt(data.vegetation.ndvi, 2)} unit={data.vegetation.unit === 'fraction' ? '' : data.vegetation.unit} delta={`${fmt(data.vegetation.change_percent)}% vs baseline`} status={data.vegetation.status} hint={`(same-month baseline: ${fmt(data.vegetation.baseline, 2)} ${data.vegetation.unit})`} accent="green" />
               <StatCard icon={CloudRain} label={data.precipitation.label} value={fmt(data.precipitation.current_mm)} unit={data.precipitation.unit} delta={`${fmt(data.precipitation.percentile)}th percentile`} status={data.precipitation.status} hint={`(baseline: ${fmt(data.precipitation.baseline_mm)} ${data.precipitation.unit})`} accent="blue" />
-              <StatCard icon={Flame} label="Active fire detections" value={fireAvailable ? data.fire.detections : '—'} unit="" delta={fireAvailable ? `${data.fire.change_percent >= 0 ? '+' : ''}${fmt(data.fire.change_percent)}% vs previous (national)` : 'Historical fire data unavailable'} status={fireAvailable ? data.fire.status : 'UNAVAILABLE'} hint={fireAvailable ? `${data.fire.clusters} spatial clusters · previous: ${data.fire.previous_period_detections} detections nationally` : 'No fire data bundled with this archive'} accent="red" />
+              <StatCard icon={Flame} label="Fire detection" value={fireAvailable ? data.fire.detections : '—'} unit="" delta={fireAvailable ? `${data.fire.change_percent >= 0 ? '+' : ''}${fmt(data.fire.change_percent)}% vs previous (national)` : 'Historical fire data unavailable'} status={fireAvailable ? data.fire.status : 'UNAVAILABLE'} hint={fireAvailable ? `${data.fire.clusters} spatial clusters · previous: ${data.fire.previous_period_detections} detections nationally` : 'No fire data bundled with this archive'} accent="red" />
             </div>
 
             <div className="section-heading map-heading"><div><span className="eyebrow">SPATIAL EXPLORER</span><h2>Earth observation map</h2></div><span className="section-meta"><span className="live-indicator"><span /> INTERACTIVE</span></span></div>
@@ -324,6 +325,7 @@ export default function App() {
             <div className="section-heading chart-heading"><div><span className="eyebrow">TEMPORAL ANALYSIS</span><h2>Indicator trends</h2></div>
               <div className="segmented">{[['temperature', data.temperature.label], ['vegetation', data.vegetation.unit === 'fraction' ? 'Soil wetness' : data.vegetation.label], ['precipitation', data.precipitation.label]].map(([id, label]) => <button key={id} onClick={() => setMetric(id)} className={metric === id ? 'chosen' : ''}>{label}</button>)}</div></div>
             <section className="chart-card"><div className="chart-title"><div><b>{metricLabel} trend</b><small>Observed values compared with baseline · {data.timeseries_scope}-wide series</small></div></div><TrendChart rows={data[metric].timeseries} metric={metric} label={metricLabel} unit={data[metric].unit} monthly={Boolean(data.grid_spacing_degrees)} /></section>
+            <IndicatorAnalysis data={data} onPickRegion={pick} />
           </>}
 
           {tab === 'indicators' && <div className="detail-grid">
@@ -331,7 +333,7 @@ export default function App() {
               { key: 'temperature', name: data.temperature.label, icon: Thermometer, metric: `${fmt(data.temperature.current)} ${data.temperature.unit}`, base: `${fmt(data.temperature.baseline)} ${data.temperature.unit} baseline`, desc: 'Temperature deviation measured against the same-month climatology.' },
               { key: 'vegetation', name: data.vegetation.label, icon: Leaf, metric: fmt(data.vegetation.ndvi, 3), base: `${fmt(data.vegetation.baseline, 3)} ${data.vegetation.unit} baseline`, desc: data.methodology.vegetation },
               { key: 'precipitation', name: data.precipitation.label, icon: CloudRain, metric: `${fmt(data.precipitation.current_mm)} ${data.precipitation.unit}`, base: `${fmt(data.precipitation.baseline_mm)} ${data.precipitation.unit} baseline`, desc: 'Precipitation position within the historical same-month distribution.' },
-              { key: 'fire', name: 'Historical fire data', icon: Flame, metric: fireAvailable ? String(data.fire.detections) : 'Unavailable', base: fireAvailable ? `${data.fire.clusters} spatial clusters` : 'Not included in this archive', desc: fireAvailable ? 'Active fire detections grouped with density-based spatial clustering (DBSCAN).' : 'NASA POWER does not include a historical fire-detection product.' }
+              { key: 'fire', name: 'Fire detection', icon: Flame, metric: fireAvailable ? String(data.fire.detections) : 'Unavailable', base: fireAvailable ? `${data.fire.clusters} spatial clusters` : 'Not included in this archive', desc: fireAvailable ? 'Active fire detections grouped with density-based spatial clustering (DBSCAN).' : 'NASA POWER does not include a historical fire-detection product.' }
             ].map(i => <section className="detail-card" key={i.key}><div className="detail-icon"><i.icon size={20} /></div><span className="eyebrow">INDICATOR DETAIL</span><h3>{i.name}</h3><div className="detail-value">{i.metric}</div><div className="detail-baseline">{i.base}</div><p>{i.desc}</p><span className={`status-tag ${tone(data[i.key].status)}`}><i />{data[i.key].status}</span></section>)}
           </div>}
 
@@ -349,8 +351,8 @@ export default function App() {
 
           {tab === 'methodology' && <section className="method-panel"><div className="section-heading"><div><span className="eyebrow">TRANSPARENT ANALYTICS</span><h2>Detection methodology</h2></div></div>
             <div className="method-list">
-              {[['01', `${data.temperature.label} · Z-score`, 'Z = (x − μ) / σ', data.methodology.temperature], ['02', data.vegetation.label, data.vegetation.unit === 'fraction' ? 'MERRA-2 root-zone soil wetness fraction' : 'NDVI = (NIR − Red) / (NIR + Red)', data.methodology.vegetation],
-                ['03', 'Precipitation · Percentile', 'Percentile rank against history', data.methodology.precipitation], ['04', 'Fire · DBSCAN', 'Density-based spatial clustering', data.methodology.fire],
+              {[['01', 'Temperature · Z-Score', 'Z = (x − μ) / σ', data.methodology.temperature], ['02', data.vegetation.unit === 'fraction' ? 'Vegetation · Soil Wetness Delta' : 'Vegetation · NDVI Delta', data.vegetation.unit === 'fraction' ? 'MERRA-2 root-zone soil wetness fraction' : 'NDVI = (NIR − Red) / (NIR + Red)', data.methodology.vegetation],
+                ['03', 'Precipitation · Quantiles', 'Historical distribution quantiles (percentile rank)', data.methodology.precipitation], ['04', 'Fire detection · DBSCAN', 'Density-based spatial clustering', data.methodology.fire],
                 ['05', 'Compound anomaly · Isolation Forest', fireAvailable ? 'V = [Z_temp, Δ%vegetation, Z_rain, Δ%Fire]' : 'V = [Z_temp, Δ%soil wetness, Z_precipitation]', data.methodology.compound]
               ].map(m => <div className="method-row" key={m[0]}><span className="method-number">{m[0]}</span><div><h3>{m[1]}</h3><code>{m[2]}</code><p>{m[3]}</p></div></div>)}
             </div>
